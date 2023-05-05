@@ -1,5 +1,6 @@
 package com.example.unigate;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -11,12 +12,15 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import androidx.biometric.BiometricPrompt; // импортируем класс BiometricPrompt из androidx.biometric пакета
+
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
+
 
 public class MainActivity extends AppCompatActivity {
 
@@ -27,6 +31,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        showBiometricPrompt();
 
         scan_btn = findViewById(R.id.scanner);
         textView = findViewById(R.id.text);
@@ -44,6 +50,27 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void showBiometricPrompt() {
+        BiometricPrompt.PromptInfo promptInfo = new BiometricPrompt.PromptInfo.Builder()
+                .setTitle("Аутентификация с помощью отпечатка пальца")
+                .setNegativeButtonText("Отмена")
+                .build();
+
+        BiometricPrompt biometricPrompt = new BiometricPrompt(this, new BiometricPrompt.AuthenticationCallback() {
+            @Override
+            public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
+                // Аутентификация прошла успешно, продолжаем работу приложения
+            }
+
+            @Override
+            public void onAuthenticationFailed() {
+                super.onAuthenticationFailed();
+                // Аутентификация не удалась, попробуйте еще раз
+            }
+        });
+
+        biometricPrompt.authenticate(promptInfo);
+    }
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
