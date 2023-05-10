@@ -1,4 +1,4 @@
-package com.example.unigate;
+package com.example.unigate.models;
 
 import java.io.Serializable;
 

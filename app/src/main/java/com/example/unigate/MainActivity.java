@@ -1,5 +1,7 @@
 package com.example.unigate;
 
+import static com.example.unigate.LoginActivity.connect;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -12,20 +14,17 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
-import androidx.biometric.BiometricPrompt; // импортируем класс BiometricPrompt из androidx.biometric пакета
+import androidx.biometric.BiometricPrompt;
 
+import com.example.unigate.models.*;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
-
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.net.Socket;
 
 
 public class MainActivity extends AppCompatActivity {
 
+    public static Door door;
     Button scan_btn;
-    TextView textView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,10 +34,10 @@ public class MainActivity extends AppCompatActivity {
         showBiometricPrompt();
 
         scan_btn = findViewById(R.id.scanner);
-        textView = findViewById(R.id.text);
 
-        IntentIntegrator intentIntegrator = new IntentIntegrator(MainActivity.this);
-        intentIntegrator.setOrientationLocked(false); // изменить на false
+
+        IntentIntegrator intentIntegrator = new IntentIntegrator(this);
+        intentIntegrator.setOrientationLocked(true);
         intentIntegrator.setPrompt("Scan a QR CODE");
         intentIntegrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE);
 
@@ -48,6 +47,8 @@ public class MainActivity extends AppCompatActivity {
                 intentIntegrator.initiateScan();
             }
         });
+
+
     }
 
     private void showBiometricPrompt() {
@@ -71,6 +72,7 @@ public class MainActivity extends AppCompatActivity {
 
         biometricPrompt.authenticate(promptInfo);
     }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -86,23 +88,13 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         String doorNumber = contents; // номер двери
-                        String serverAddress = "192.168.88.95"; // адрес сервера
-                        int serverPort = 3489; // порт сервера
-
-                        try {
-                            // Соединяемся с сервером
-                            Socket socket = new Socket(serverAddress, serverPort);
-
-                            // Отправляем сообщение на сервер
-                            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-                            out.println(doorNumber);
-
-                            // Закрываем соединение
-                            socket.close();
-
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
+                        Door door = new Door();
+                        door.setLocation(doorNumber);
+                        PackageData packageData = new PackageData();
+                        packageData.setOperationType("OPEN_DOOR_MOBILE");
+                        packageData.setDoor(door);
+                        packageData.setUser(LoginActivity.user);
+                        connect(MainActivity.this, packageData);
                     }
                 });
                 builder.setNegativeButton("Нет", new DialogInterface.OnClickListener() {
@@ -114,11 +106,11 @@ public class MainActivity extends AppCompatActivity {
                 AlertDialog dialog = builder.create();
                 dialog.show();
 
-                textView.setText(contents);
             }
         } else {
             super.onActivityResult(requestCode, resultCode, data);
         }
     }
+
 
 }
