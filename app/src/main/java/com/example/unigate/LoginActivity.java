@@ -1,19 +1,18 @@
 package com.example.unigate;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import com.example.unigate.models.PackageData;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import com.example.unigate.models.PackageData;
+import androidx.appcompat.app.AppCompatActivity;
+
 import com.example.unigate.models.User;
 
 import java.io.IOException;
@@ -22,15 +21,12 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.security.NoSuchAlgorithmException;
 
-
 public class LoginActivity extends AppCompatActivity {
-
     private EditText usernameEditText;
     private EditText passwordEditText;
     private Button loginButton;
 
     public static User user;
-    private static final String SHARED_PREFS_FILE = "LoginPrefs";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,15 +49,10 @@ public class LoginActivity extends AppCompatActivity {
                 } else if (password.isEmpty()) {
                     // Проверка на пустое поле пароля
                     Toast.makeText(LoginActivity.this, "Введите пароль", Toast.LENGTH_SHORT).show();
-                } else if (isUserLoggedIn()) {
-                    // User is already logged in, skip the login process
-                    Toast.makeText(LoginActivity.this, "User is already logged in", Toast.LENGTH_SHORT).show();
-                    redirectToMainActivity();
                 } else if (isValidCredentials(username, password)) {
                     // Валидные учетные данные, выполняем вход
                     try {
                         loginUser(username, password);
-                        redirectToMainActivity();
                     } catch (NoSuchAlgorithmException e) {
                         throw new RuntimeException(e);
                     }
@@ -89,29 +80,12 @@ public class LoginActivity extends AppCompatActivity {
         user_check.setPassword(Security.hashPassword(password, "8fa985e47a9d6f1bd3bbb75427442f6b"));
         PackageData pd = new PackageData("SIGN_IN_MOBILE", user_check);
         connect(LoginActivity.this, pd);
-
-        // Save username and password to SharedPreferences
-        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS_FILE, MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putString("username", username);
-        editor.putString("password", password);
-        editor.apply();
     }
 
-    private boolean isUserLoggedIn() {
-        // Check if the user is already logged in by checking SharedPreferences
-        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS_FILE, MODE_PRIVATE);
-        String username = sharedPreferences.getString("username", "");
-        String password = sharedPreferences.getString("password", "");
-
-        // Return true if both username and password are not empty
-        return !username.isEmpty() && !password.isEmpty();
-    }
-
-    public void redirectToMainActivity() {
-        Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-        startActivity(intent);
-        finish();
+    public static void redirectToMainActivity(Activity activity) {
+        Intent intent = new Intent(activity, MainActivity.class);
+        activity.startActivity(intent);
+        activity.finish();
     }
 
     public static void connect(Activity activity, PackageData pd) {
@@ -119,7 +93,7 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void run() {
                 try {
-                    Socket socket = new Socket("192.168.1.123", 3489);
+                    Socket socket = new Socket("192.168.1.99", 3489);
                     ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
                     ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
 
@@ -127,11 +101,18 @@ public class LoginActivity extends AppCompatActivity {
                         outputStream.writeObject(pd);
                         PackageData infoFromServer = (PackageData) inputStream.readObject();
                         user = infoFromServer.getUser();
-                    } else if (pd.getOperationType().equals("OPEN_DOOR_MOBILE")) {
-                        outputStream.writeObject(pd);
-                        PackageData infoFromServer = (PackageData) inputStream.readObject();
-                        MainActivity.door = infoFromServer.getDoor();
+                        activity.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                redirectToMainActivity(activity);
+                            }
+                        });
                     }
+                    else if(pd.getOperationType().equals("SIGN_IN_MOBILE")){
+                    outputStream.writeObject(pd);
+
+                }
+
 
                     inputStream.close();
                     outputStream.close();
@@ -161,9 +142,4 @@ public class LoginActivity extends AppCompatActivity {
         }).start();
     }
 }
-
-
-
-
-
 
