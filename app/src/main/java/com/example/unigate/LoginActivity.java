@@ -108,7 +108,7 @@ public class LoginActivity extends AppCompatActivity {
                             }
                         });
                     }
-                    else if(pd.getOperationType().equals("SIGN_IN_MOBILE")){
+                    else if(pd.getOperationType().equals("OPEN_DOOR_MOBILE")){
                     outputStream.writeObject(pd);
 
                 }
