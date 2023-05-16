@@ -13,6 +13,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.biometric.BiometricPrompt;
 
@@ -83,7 +84,7 @@ public class MainActivity extends AppCompatActivity {
             if (contents != null) {
                 // Показать диалоговое окно
                 AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                builder.setMessage("Вы действительно хотите открыть дверь с этим кодом: " + contents);
+                builder.setMessage("Вы действительно хотите открыть дверь: " + contents);
                 builder.setPositiveButton("Да", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
@@ -95,6 +96,7 @@ public class MainActivity extends AppCompatActivity {
                         packageData.setDoor(door);
                         packageData.setUser(LoginActivity.user);
                         connect(MainActivity.this, packageData);
+                        Toast.makeText(MainActivity.this, "Request sent to the server", Toast.LENGTH_SHORT).show();
                     }
                 });
                 builder.setNegativeButton("Нет", new DialogInterface.OnClickListener() {

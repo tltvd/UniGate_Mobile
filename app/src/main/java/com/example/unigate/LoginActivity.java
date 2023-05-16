@@ -15,25 +15,21 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.unigate.models.User;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManagerFactory;
-
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.security.KeyManagementException;
+import java.net.Socket;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+
+import javax.net.ssl.*;
 
 public class LoginActivity extends AppCompatActivity {
     private EditText usernameEditText;
     private EditText passwordEditText;
     private Button loginButton;
-
     public static User user;
 
     @Override
@@ -61,8 +57,8 @@ public class LoginActivity extends AppCompatActivity {
                     // Валидные учетные данные, выполняем вход
                     try {
                         loginUser(username, password);
-                    } catch (NoSuchAlgorithmException e) {
-                        throw new RuntimeException(e);
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
                 } else {
                     // Неверные учетные данные, отображаем сообщение об ошибке
@@ -80,7 +76,7 @@ public class LoginActivity extends AppCompatActivity {
         return !username.isEmpty() && !password.isEmpty();
     }
 
-    private void loginUser(String username, String password) throws NoSuchAlgorithmException {
+    private void loginUser(String username, String password) throws Exception {
         User user_check = new User();
         user_check.setUsername(username);
         Security security = new Security();
@@ -101,23 +97,26 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void run() {
                 try {
-                    // Загрузка SSL-сертификата
-                    char[] keystorePassword = "iitu2019".toCharArray(); // Пароль для доступа к хранилищу ключей
-                    KeyStore keystore = KeyStore.getInstance("JKS");
-                    keystore.load(LoginActivity.class.getResourceAsStream("/keystore.jks"), keystorePassword);
+                    // Загрузка доверенного сертификата
+                    InputStream certInputStream = activity.getResources().openRawResource(R.raw.certificate);
+                    CertificateFactory cf = CertificateFactory.getInstance("X.509");
+                    X509Certificate cert = (X509Certificate) cf.generateCertificate(certInputStream);
+                    certInputStream.close();
+                    // Создание хранилища ключей и добавление доверенного сертификата
+                    char[] password = "iitu2019".toCharArray();
+                    KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+                    trustStore.load(null, password);
+                    trustStore.setCertificateEntry("server", cert);
 
-                    // Создание менеджера ключей
-                    TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-                    tmf.init(keystore);
-
-                    // Создание SSL-контекста
+                    // Создание менеджера доверия и инициализация SSL контекста
+                    TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                    trustManagerFactory.init(trustStore);
                     SSLContext sslContext = SSLContext.getInstance("TLS");
-                    sslContext.init(null, tmf.getTrustManagers(), null);
+                    sslContext.init(null, trustManagerFactory.getTrustManagers(), null);
 
-                    // Создание SSL-сокета
+                    // Создание SSL сокета
                     SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
-                    SSLSocket socket = (SSLSocket) sslSocketFactory.createSocket("192.168.1.123", 3489);
-
+                    Socket socket = sslSocketFactory.createSocket("127.0.0.1", 3489);
                     ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
                     ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
 
@@ -131,6 +130,9 @@ public class LoginActivity extends AppCompatActivity {
                                 redirectToMainActivity(activity);
                             }
                         });
+                    }else if(pd.getOperationType().equals("OPEN_DOOR_MOBILE")){
+                            outputStream.writeObject(pd);
+
                     }
 
                     inputStream.close();
@@ -154,21 +156,15 @@ public class LoginActivity extends AppCompatActivity {
                             dialog.show();
                         }
                     });
-                } catch (ClassNotFoundException e) {
-                    throw new RuntimeException(e);
-                } catch (CertificateException e) {
-                    throw new RuntimeException(e);
-                } catch (KeyStoreException e) {
-                    throw new RuntimeException(e);
-                } catch (NoSuchAlgorithmException e) {
-                    throw new RuntimeException(e);
-                } catch (KeyManagementException e) {
+                } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
             }
         }).start();
     }
+
 }
+
 
 
 
